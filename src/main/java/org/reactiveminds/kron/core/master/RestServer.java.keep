@@ -1,0 +1,86 @@
+package org.reactiveminds.kron.master;
+
+import static spark.Spark.post;
+import static spark.Spark.stop;
+
+import java.io.IOException;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
+import org.reactiveminds.kron.dto.ExecutionRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
+
+@Component
+@Lazy
+class RestServer {
+	private static final Logger log = LoggerFactory.getLogger("RestServer");
+	@Autowired
+	JobRegistrationService jobRegistry;
+	
+	private ObjectMapper mapper;
+	@PostConstruct
+	void init() throws JsonProcessingException {
+		mapper = new ObjectMapper();
+		mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
+		.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+		.configure(SerializationFeature.INDENT_OUTPUT, true);
+		mapEndpointUrls();
+		
+		ExecutionRequest req = new ExecutionRequest();
+		req.setCronSchedule("*/10 * * * * *");
+		req.setJobCommand("dir/p/o");
+		req.setJobName("List Dir");
+		req.setMinMemoryMb(64);
+		req.setNumOfCores(1);
+		
+		System.out.println(mapper.writer().withDefaultPrettyPrinter().writeValueAsString(req));
+	}
+	@PreDestroy
+	void destroy() {
+		stop();
+	}
+	private void mapEndpointUrls() {
+		/*
+		 * submit new job
+		 */
+		post("/api/job", (req, res) -> {
+			try {
+				ExecutionRequest execRequest = mapper.readerFor(ExecutionRequest.class).readValue(req.body());
+				Assert.isTrue(StringUtils.hasLength(execRequest.getJobName()), "'jobName' not found");
+				Assert.isTrue(StringUtils.hasLength(execRequest.getCronSchedule()), "'cronSchedule' not found");
+				Assert.isTrue(StringUtils.hasLength(execRequest.getJobCommand()), "'jobCommand' not found");
+				
+				jobRegistry.registerJob(execRequest);
+				log.info("Added new job - " + execRequest.getJobName());
+				res.status(201);
+			} 
+			catch (IOException | IllegalArgumentException e) {
+				log.warn("Request error: ", e);
+				res.status(400);
+				return e.getMessage();
+			}
+			catch (Exception e) {
+				log.error("Unexpected error: ", e);
+				res.status(502);
+				return "Service Unavailable!";
+			}
+			return "OK";
+		});
+		
+		
+	}
+
+}
