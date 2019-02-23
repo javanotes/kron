@@ -8,6 +8,7 @@ import org.reactiveminds.kron.core.ScheduledDaemon;
 import org.reactiveminds.kron.model.NodeInfo;
 import org.reactiveminds.kron.scheduler.vo.Schedule;
 import org.reactiveminds.kron.scheduler.vo.SecSchedule;
+import org.reactiveminds.kron.utils.SystemUsage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -19,13 +20,17 @@ class SystemInfoDaemon implements ScheduledDaemon {
 
 	@Autowired
 	DistributionService distService;
-	@Value("${kron.worker.sysinfoScheduleSecs:10}")
+	@Value("${kron.worker.sysinfo.scheduleSecs:10}")
 	private int scheduleSecs;
+	@Value("${kron.worker.sysinfo.useJavaRuntime:false}")
+	private boolean disableSigar;
 	@Autowired
 	SchedulingSupport executors;
 	@PostConstruct
 	private void init() {
-		NodeInfo.useJRESupportToGather();
+		if (disableSigar) {
+			SystemUsage.useJRESupportToGather();
+		}
 	}
 	@Override
 	public void run() {

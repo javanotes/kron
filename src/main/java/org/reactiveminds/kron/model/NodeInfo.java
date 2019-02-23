@@ -2,7 +2,7 @@ package org.reactiveminds.kron.model;
 
 import java.io.IOException;
 
-import org.reactiveminds.kron.utils.SystemInfo;
+import org.reactiveminds.kron.utils.SystemUsage;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -13,13 +13,6 @@ import com.hazelcast.nio.serialization.DataSerializable;
  *
  */
 public class NodeInfo implements DataSerializable {
-	/**
-	 * Disables the use of Sigar library (even if present), and 
-	 * falls back to com.sun.management.OperatingSystemMXBean probes.
-	 */
-	public static void useJRESupportToGather() {
-		SystemInfo.disableSigar();
-	}
 	public String getWorkerId() {
 		return workerId;
 	}
@@ -28,7 +21,7 @@ public class NodeInfo implements DataSerializable {
 		this.workerId = workerId;
 	}
 
-	public SystemInfo getSysInfo() {
+	public SystemUsage getSysInfo() {
 		return sysInfo;
 	}
 	/**
@@ -36,16 +29,16 @@ public class NodeInfo implements DataSerializable {
 	 * Will erase previous info run and calculate fresh new.
 	 */
 	public void gather() {
-		sysInfo = new SystemInfo();
+		sysInfo = new SystemUsage();
 		sysInfo.run();
 	}
-	public void setSysInfo(SystemInfo sysInfo) {
+	public void setSysInfo(SystemUsage sysInfo) {
 		this.sysInfo = sysInfo;
 	}
 
 	private int jobsRunning;
 	private String workerId;
-	private SystemInfo sysInfo;
+	private SystemUsage sysInfo;
 	@Override
 	public void writeData(ObjectDataOutput out) throws IOException {
 		out.writeUTF(workerId);
@@ -61,7 +54,7 @@ public class NodeInfo implements DataSerializable {
 		setJobsRunning(in.readInt());
 		byte[] b = new byte[in.readInt()];
 		in.readFully(b);
-		sysInfo = new SystemInfo();
+		sysInfo = new SystemUsage();
 		sysInfo.fromBytes(b);
 	}
 

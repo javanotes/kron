@@ -13,9 +13,7 @@ import org.hyperic.sigar.Mem;
 import org.hyperic.sigar.Sigar;
 import org.hyperic.sigar.SigarException;
 
-import com.sun.management.OperatingSystemMXBean;
-
-public final class SystemInfo implements Runnable{
+public final class SystemUsage implements Runnable{
 
 	private static double roundTo2Decimal(double d) {
 		return roundToDecimal(d, 2);
@@ -25,7 +23,7 @@ public final class SystemInfo implements Runnable{
 	}
 	@Override
 	public String toString() {
-		return "SystemInfo [processCpuLoad=" + processCpuLoad + ", systemCpuLoad=" + systemCpuLoad
+		return "SystemUsage [processCpuLoad=" + processCpuLoad + ", systemCpuLoad=" + systemCpuLoad
 				+ ", totalPhysicalMemory=" + totalPhysicalMemory + ", pctFreeMemory=" + pctFreeMemory
 				+ ", availableProcessors=" + numOfProcessors + ", lastTimestamp=" + lastTimestamp + ", platform="
 				+ platform + "]";
@@ -51,14 +49,16 @@ public final class SystemInfo implements Runnable{
 	private long lastTimestamp;
 	
 	private static boolean isSigarEnabled = true;
-	public static void enableSigar() {
-		isSigarEnabled = true;
-	}
-	public static void disableSigar() {
+	/**
+	 * Disables the use of Sigar library (even if present), and 
+	 * falls back to com.sun.management.OperatingSystemMXBean probes.
+	 */
+	public static void useJRESupportToGather() {
 		isSigarEnabled = false;
 	}
+	@SuppressWarnings("restriction")
 	private void useJava() {
-		com.sun.management.OperatingSystemMXBean os = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+		com.sun.management.OperatingSystemMXBean os = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
 		totalPhysicalMemory = roundTo2Decimal( (os.getTotalPhysicalMemorySize() * 1.0) / 1024 / 1024);
 		pctFreeMemory = roundTo2Decimal( ((os.getFreePhysicalMemorySize() * 1.0) / os.getTotalPhysicalMemorySize()) * 100 );
 		processCpuLoad = roundTo2Decimal( os.getProcessCpuLoad()*100.0 );
@@ -161,7 +161,7 @@ public final class SystemInfo implements Runnable{
 	
 	public static void main(String[] args) throws InterruptedException {
 		Thread.sleep(2000);
-		SystemInfo sys = new SystemInfo();
+		SystemUsage sys = new SystemUsage();
 		sys.run();
 		System.out.println(sys);
 		sys.useJava();
@@ -171,7 +171,7 @@ public final class SystemInfo implements Runnable{
 		return totalCpuCacheSize;
 	}
 	public static void setTotalCpuCacheSize(long totalCpuCacheSize) {
-		SystemInfo.totalCpuCacheSize = totalCpuCacheSize;
+		SystemUsage.totalCpuCacheSize = totalCpuCacheSize;
 	}
 	
 }
