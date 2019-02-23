@@ -37,17 +37,6 @@ class LeaderTaskRunner implements Runnable, JobEntryListener {
 		distService.setJobListener(this);
 		log.debug("Yay! I am the leader now ");
 		
-		/*ExecutionRequest req = new ExecutionRequest();
-		req.setJobCommand("dir/p/o");
-		req.setJobName("List Dir");
-		req.setMinMemoryMb(64);
-		req.setNumOfCores(1);
-		
-		JobEntry j = new JobEntry();
-		j.setEnabled(true);
-		j.setJob(req);
-		
-		System.out.println(JsonMapper.toString(j));*/
 	}
 	@Override
 	public void onEntryAdded(JobEntry job) {

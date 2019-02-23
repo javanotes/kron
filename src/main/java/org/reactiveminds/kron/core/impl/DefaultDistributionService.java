@@ -3,6 +3,7 @@ package org.reactiveminds.kron.core.impl;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Observable;
+import java.util.Observer;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -10,8 +11,8 @@ import java.util.stream.Collectors;
 import org.reactiveminds.kron.core.DistributionService;
 import org.reactiveminds.kron.core.JobEntryFilter;
 import org.reactiveminds.kron.core.JobEntryListener;
+import org.reactiveminds.kron.core.LeaderElectNotifier;
 import org.reactiveminds.kron.core.MessageCallback;
-import org.reactiveminds.kron.core.master.LeaderObserver;
 import org.reactiveminds.kron.dto.CommandAndTarget;
 import org.reactiveminds.kron.err.OperationNotPermittedException;
 import org.reactiveminds.kron.model.JobEntry;
@@ -40,7 +41,7 @@ import com.hazelcast.map.listener.EntryUpdatedListener;
 import com.hazelcast.util.StringUtil;
 
 @Service
-class DefaultDistributionService extends Observable implements DistributionService {
+class DefaultDistributionService implements DistributionService {
 
 	@Autowired
 	private HazelcastInstance hazelcast;
@@ -51,6 +52,13 @@ class DefaultDistributionService extends Observable implements DistributionServi
 	public boolean isElectedLeader() {
 		return isElectedLeader;
 	}
+	private Observable leaderNotifer = new Observable() {
+		@Override
+		public void notifyObservers(Object o) {
+			setChanged();
+			super.notifyObservers(o);
+		}
+	};
 	private Thread electorThread = new Thread("MasterElectorRunner") {
 		@Override
 		public void run() {
@@ -61,8 +69,7 @@ class DefaultDistributionService extends Observable implements DistributionServi
 				isElectedLeader = true;
 			}
 			LOG.info("* Node elected as the Leader *");
-			setChanged();
-			notifyObservers();
+			leaderNotifer.notifyObservers("ELECT");
 		}
 	};
 	@Override
@@ -118,8 +125,13 @@ class DefaultDistributionService extends Observable implements DistributionServi
 	}
 	
 	@Override
-	public void registerLeaderCallback(LeaderObserver observer) {
-		addObserver(observer);
+	public void registerLeaderCallback(LeaderElectNotifier observer) {
+		leaderNotifer.addObserver(new Observer() {
+			@Override
+			public void update(Observable o, Object arg) {
+				observer.onElect(arg.toString());
+			}
+		});
 	}
 
 	@Override

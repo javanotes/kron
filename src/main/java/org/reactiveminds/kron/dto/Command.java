@@ -2,10 +2,21 @@ package org.reactiveminds.kron.dto;
 
 public enum Command {
 
-	NEWJOB {
+	SCHEDULE {
 		@Override
 		public String getCommand() {
-			return "NEWJOB";
+			return "SCHEDULED";
+		}
+
+		@Override
+		public int getPriority() {
+			return 0;
+		}
+	},
+	EXECUTE {
+		@Override
+		public String getCommand() {
+			return "EXECUTABLE";
 		}
 
 		@Override

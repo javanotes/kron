@@ -32,26 +32,27 @@ public class WorkerObserver implements CommandLineRunner, MessageCallback<Comman
 			distService.registerWorkerChannel(this);
 		}
 	}
+
 	private boolean isMatchedTargetFilter(CommandAndTarget message) {
-		return distService.isWorkerNode() && distService.getSelfId().equals(message.getTargetPattern());
+		return distService.isWorkerNode() && (distService.getSelfId().equals(message.getTargetPattern())
+				|| message.getTargetPattern().equals(CommandAndTarget.TARGET_ALL));
 	}
 	@Override
 	public void onMessage(CommandAndTarget message) {
 		if(isMatchedTargetFilter(message)) {
 			Command cmd = message.getCommand();
 			switch(cmd) {
-				case NEWJOB:
-					TaskRunner runner = beanFactory.getBean(TaskRunner.class, message.getRequest());
-					runner.setDefaultWorkDir(workDir);
-					executor.execute(runner);
+				case UNDEF:
 					break;
 				case SYSTEMSTAT:
 					beanFactory.getBean(SystemInfoDaemon.class).run();
 					distService.countdownLatch(cmd.name());
 					break;
 				default:
+					TaskRunner runner = beanFactory.getBean(TaskRunner.class, message);
+					runner.setDefaultWorkDir(workDir);
+					executor.execute(runner);
 					break;
-			
 			}
 		}
 		

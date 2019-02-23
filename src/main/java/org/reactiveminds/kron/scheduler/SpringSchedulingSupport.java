@@ -1,6 +1,5 @@
 package org.reactiveminds.kron.scheduler;
 
-import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -11,8 +10,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.PreDestroy;
 
-import org.reactiveminds.kron.core.SchedulingSupport;
 import org.reactiveminds.kron.core.ScheduledDaemon;
+import org.reactiveminds.kron.core.SchedulingSupport;
 import org.reactiveminds.kron.scheduler.vo.Schedule;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,7 +53,7 @@ class SpringSchedulingSupport implements SchedulingSupport {
 		ScheduledFuture<?> f;
 		if (schedule.getRepeatAfter() > 0) {
 			f = beanFactory.getBean(TaskScheduler.class).scheduleAtFixedRate(daemon, schedule.getStartTime(),
-					Duration.ofMillis(schedule.getUnit().toMillis(schedule.getRepeatAfter())));
+					schedule.getUnit().toMillis(schedule.getRepeatAfter()));
 		}
 		else
 			f = beanFactory.getBean(TaskScheduler.class).schedule(daemon, schedule.getStartTime());
@@ -99,4 +98,5 @@ class SpringSchedulingSupport implements SchedulingSupport {
 			iter.remove();
 		}
 	}
+
 }

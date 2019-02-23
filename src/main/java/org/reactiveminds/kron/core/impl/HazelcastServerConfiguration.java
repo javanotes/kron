@@ -10,11 +10,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.Resource;
 import org.springframework.util.ResourceUtils;
 import org.springframework.util.StringUtils;
 
 import com.hazelcast.config.Config;
+import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MapStoreConfig;
 import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -24,7 +27,9 @@ import com.hazelcast.core.HazelcastInstance;
 class HazelcastServerConfiguration {
 	
 	@Value("${spring.hazelcast.config:}")
-	String configXml;
+	private String configXml;
+	@Value("${kron.store.enabled:false}")
+	private boolean storeEnabled;
 	@Autowired
 	ApplicationContext context;
 	private static Config getConfig(Resource configLocation) throws IOException {
@@ -41,6 +46,16 @@ class HazelcastServerConfiguration {
 		}
 		return config;
 	}
+	@Lazy
+	@Bean
+	JobMasterStore aJobMasterStore() {
+		return new JobMasterStore();
+	}
+	@Lazy
+	@Bean
+	JobRunStore aJobRunStore() {
+		return new JobRunStore();
+	}
 	@Bean
 	public HazelcastInstance hazelcastInstance()
 			throws IOException {
@@ -51,6 +66,21 @@ class HazelcastServerConfiguration {
 		}
 		Config conf = getConfig(config);
 		conf.setProperty("hazelcast.rest.enabled", "true");
+		
+		if (storeEnabled) {
+			MapConfig mapc = conf.getMapConfig(DistributionService.JOB_MASTER);
+			MapStoreConfig storeCfg = new MapStoreConfig();
+			storeCfg.setEnabled(true);
+			storeCfg.setImplementation(aJobMasterStore());
+			mapc.setMapStoreConfig(storeCfg);
+			
+			mapc = conf.getMapConfig(DistributionService.EXEC_STATUS);
+			storeCfg = new MapStoreConfig();
+			storeCfg.setEnabled(true);
+			storeCfg.setImplementation(aJobRunStore());
+			mapc.setMapStoreConfig(storeCfg);
+		}
+		
 		return Hazelcast.newHazelcastInstance(conf);
 	}
 

@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.TimeUnit;
 
-import org.reactiveminds.kron.core.master.LeaderObserver;
 import org.reactiveminds.kron.dto.CommandAndTarget;
 import org.reactiveminds.kron.model.JobEntry;
 import org.reactiveminds.kron.model.NodeInfo;
@@ -26,7 +25,7 @@ public interface DistributionService {
 	String WORKERID = "WORKERID";
 	String NODE_INFO = "NODE_INFO";
 	
-	void registerLeaderCallback(LeaderObserver observer);
+	void registerLeaderCallback(LeaderElectNotifier observer);
 	void tryElectAsLeader();
 	
 	void registerWorkerChannel(MessageCallback<CommandAndTarget> callback);

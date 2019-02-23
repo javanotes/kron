@@ -1,8 +1,9 @@
 package org.reactiveminds.kron.scheduler.vo;
 
-import java.time.Instant;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
+
+import org.springframework.util.Assert;
 
 public class Schedule{
 	/**
@@ -13,7 +14,7 @@ public class Schedule{
 	 */
 	public Schedule(Date startTime, long repeatAfter, TimeUnit unit) {
 		super();
-		this.startTime = startTime != null ? startTime.toInstant() : Instant.now();
+		this.startTime = startTime == null ? new Date() : startTime;
 		this.repeatAfter = repeatAfter;
 		this.unit = unit;
 	}
@@ -22,14 +23,14 @@ public class Schedule{
 	 * @param startTime
 	 */
 	public Schedule(Date startTime) {
-		super();
-		this.startTime = startTime != null ? startTime.toInstant() : Instant.now();
+		Assert.notNull(startTime, "Scheduled time reqd");
+		this.startTime = startTime;
 		this.repeatAfter = -1;
 	}
 	Schedule(long repeatAfter, TimeUnit unit) {
 		this(null, repeatAfter, unit);
 	}
-	public Instant getStartTime() {
+	public Date getStartTime() {
 		return startTime;
 	}
 	
@@ -43,7 +44,7 @@ public class Schedule{
 	public void setUnit(TimeUnit unit) {
 		this.unit = unit;
 	}
-	private final Instant startTime;
+	private final Date startTime;
 	private final long repeatAfter;
 	private TimeUnit unit = TimeUnit.MILLISECONDS;
 }

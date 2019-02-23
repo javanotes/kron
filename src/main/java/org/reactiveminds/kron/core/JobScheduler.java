@@ -10,7 +10,11 @@ public interface JobScheduler {
 	 * @param job
 	 */
 	void scheduleJob(JobEntry job);
-
+	/**
+	 * Cancels the schedule
+	 * @param jobName
+	 */
+	void cancelJob(String jobName);
 	/**
 	 * Submit a new job. This is an alternative API to posting a {@linkplain JobEntry} via Hz Rest
 	 * @param request

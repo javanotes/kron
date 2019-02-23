@@ -21,7 +21,7 @@ public interface JobEntryFilter extends Predicate<JobEntry> {
 		private final String pattern;
 		@Override
 		public boolean test(JobEntry t) {
-			return t.isEnabled() && t.getJob().getJobName().matches(pattern);
+			return t.isEnabled() && t.getJobName().matches(pattern);
 		}
 		
 	}

@@ -24,7 +24,7 @@ class LoadBalancedSchedulingPolicy implements SchedulingPolicy {
 	public void allocate(CommandAndTarget command) {
 		NavigableSet<NodeInfo> nodes = distService.getWorkerSnapshot();
 		if(nodes == null || nodes.isEmpty()) {
-			throw new NoWorkerAvailableException(command.getRequest().getJobName());
+			throw new NoWorkerAvailableException(command.getJobName());
 		}
 		NodeInfo node = nodes.first();
 		command.setTargetPattern(node.getWorkerId());

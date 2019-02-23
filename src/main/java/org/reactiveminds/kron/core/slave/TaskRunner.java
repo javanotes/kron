@@ -4,10 +4,11 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
-import org.reactiveminds.kron.model.ExecutionRequest;
+import org.reactiveminds.kron.dto.CommandAndTarget;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,11 +24,11 @@ class TaskRunner implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger("TaskRunner");
 	@Value("${kron.worker.goblerThreadEnable:false}")
 	private boolean goblerThreadEnable;
-	public TaskRunner(ExecutionRequest taskCommand) {
+	public TaskRunner(CommandAndTarget taskCommand) {
 		super();
 		this.taskCommand = taskCommand;
 	}
-	private ExecutionRequest taskCommand;
+	private CommandAndTarget taskCommand;
 	private String defaultWorkDir;
 	
 	public void setDefaultWorkDir(String workDir) {
@@ -61,16 +62,33 @@ class TaskRunner implements Runnable {
 			}
 		}
 	}
+	private static int pid(Process process)
+	{
+	    if (process.getClass().getName().equals("java.lang.UNIXProcess"))
+	    {
+	        try
+	        {
+	            Field f = process.getClass().getDeclaredField("pid");
+	            f.setAccessible(true);
+	            return f.getInt(process);
+	        }
+	        catch (Exception e)
+	        {
+	        }
+	    }
+
+	    return 0;
+	}
 	@Override
 	public void run() {
-		log.info("["+taskCommand.getJobName()+"] Executing "+taskCommand.getJobCommand());
+		log.info("["+taskCommand.getJobName()+"] Executing "+taskCommand.getExecution().getJobCommand());
 		Process proc = null;
 		try {
-			ProcessBuilder builder = new ProcessBuilder(taskCommand.getJobCommand().split(" "));
-			builder.directory(ResourceUtils.getFile(StringUtils.hasText(taskCommand.getWorkDir()) ? taskCommand.getWorkDir() : defaultWorkDir));
+			ProcessBuilder builder = new ProcessBuilder(taskCommand.getExecution().getJobCommand().split(" "));
+			builder.directory(ResourceUtils.getFile(StringUtils.hasText(taskCommand.getExecution().getWorkDir()) ? taskCommand.getExecution().getWorkDir() : defaultWorkDir));
 			builder.redirectErrorStream(true);
-			
 			proc = builder.start();
+			log.info("["+taskCommand.getJobName()+"] pid: "+pid(proc));
 			try(StreamGobler sg = new StreamGobler(proc.getInputStream())){
 				if (goblerThreadEnable) {
 					sg.start();

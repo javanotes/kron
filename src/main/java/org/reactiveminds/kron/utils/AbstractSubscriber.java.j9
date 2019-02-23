@@ -1,0 +1,29 @@
+package org.reactiveminds.kron.utils;
+
+import java.util.concurrent.Flow.Subscriber;
+import java.util.concurrent.Flow.Subscription;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public abstract class AbstractSubscriber<T> implements Subscriber<T> {
+
+	protected static final Logger log = LoggerFactory.getLogger("AbstractSubscriber");
+	protected Subscription subscription;
+	@Override
+	public void onSubscribe(Subscription subscription) {
+		this.subscription = subscription;
+		this.subscription.request(1);
+	}
+
+	@Override
+	public void onError(Throwable throwable) {
+		log.error("Exception on subscribing", throwable);
+	}
+
+	@Override
+	public void onComplete() {
+		// noop
+	}
+
+}

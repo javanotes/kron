@@ -15,7 +15,6 @@ import org.hyperic.sigar.SigarException;
 
 import com.sun.management.OperatingSystemMXBean;
 
-@SuppressWarnings("restriction")
 public final class SystemInfo implements Runnable{
 
 	private static double roundTo2Decimal(double d) {
@@ -74,7 +73,7 @@ public final class SystemInfo implements Runnable{
 				Method m = clazz.getMethod("load");
 				m.invoke(null);
 			} catch (NoSuchMethodException | SecurityException e) {}
-			clazz.newInstance();
+			clazz.getDeclaredConstructor().newInstance();
 		} catch (Exception e) {
 			System.err.println("WARN : Sigar not available, will use JRE support for system info * "+e.getMessage());
 			isSigarEnabled = false;
