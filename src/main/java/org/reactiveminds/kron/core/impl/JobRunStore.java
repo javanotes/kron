@@ -2,54 +2,64 @@ package org.reactiveminds.kron.core.impl;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
+import org.reactiveminds.kron.core.JobScheduler;
+import org.reactiveminds.kron.core.JobScheduler.HKey;
 import org.reactiveminds.kron.model.JobRunEntry;
+import org.reactiveminds.kron.model.JobRunEntryRepo;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.hazelcast.core.MapStore;
+/**
+ * @author Sutanu_Dalui
+ *
+ */
+class JobRunStore implements MapStore<String, JobRunEntry> {
 
-class JobRunStore implements MapStore<Long, JobRunEntry> {
-
-
+	@Autowired
+	JobRunEntryRepo repo;
 	@Override
-	public JobRunEntry load(Long key) {
-		// TODO Auto-generated method stub
-		return null;
+	public JobRunEntry load(String key) {
+		HKey k = JobScheduler.extractExecutionKey(key);
+		return repo.findByJobNameAndExecId(k.jobName, k.seq);
 	}
 
 	@Override
-	public Map<Long, JobRunEntry> loadAll(Collection<Long> keys) {
-		// TODO Auto-generated method stub
-		return null;
+	public Map<String, JobRunEntry> loadAll(Collection<String> keys) {
+		return StreamSupport.stream(keys.spliterator(), false)
+		.map(s -> load(s))
+		.collect(Collectors.toMap(j -> JobScheduler.makeExecutionKey(j.getJobName(), j.getExecId()), Function.identity()));
 	}
 
 	@Override
-	public Iterable<Long> loadAllKeys() {
-		// TODO Auto-generated method stub
-		return null;
+	public Iterable<String> loadAllKeys() {
+		return StreamSupport.stream(repo.findAll().spliterator(), false)
+		.map(j -> JobScheduler.makeExecutionKey(j.getJobName(), j.getExecId()))
+		.collect(Collectors.toList());
 	}
 
 	@Override
-	public void store(Long key, JobRunEntry value) {
-		// TODO Auto-generated method stub
-		
+	public void store(String key, JobRunEntry value) {
+		repo.save(value);
 	}
 
 	@Override
-	public void storeAll(Map<Long, JobRunEntry> map) {
-		// TODO Auto-generated method stub
-		
+	public void storeAll(Map<String, JobRunEntry> map) {
+		repo.saveAll(map.values());
 	}
 
 	@Override
-	public void delete(Long key) {
-		// TODO Auto-generated method stub
-		
+	public void delete(String key) {
+		HKey k = JobScheduler.extractExecutionKey(key);
+		repo.deleteByJobNameAndExecId(k.jobName, k.seq);
 	}
 
 	@Override
-	public void deleteAll(Collection<Long> keys) {
-		// TODO Auto-generated method stub
-		
+	public void deleteAll(Collection<String> keys) {
+		keys.forEach(k -> delete(k));
 	}
 
 }

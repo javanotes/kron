@@ -1,14 +1,23 @@
 package org.reactiveminds.kron.utils;
 
 import org.reactiveminds.kron.err.KronRuntimeException;
+import org.reactiveminds.kron.model.JobEntry;
+import org.springframework.util.Assert;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.hazelcast.internal.ascii.rest.RestValue;
+import com.hazelcast.util.StringUtil;
 
 public class JsonMapper {
 
+	public static JobEntry toJobEntry(RestValue val) {
+		String cType = StringUtil.bytesToString(val.getContentType());
+		Assert.isTrue(cType.toLowerCase().contains("json"), "Entry added over rest is not a permitted content-type: "+cType);
+		return deserialize(val.getValue(), JobEntry.class);
+	}
 	private JsonMapper() {
 	}
 	private static class Wrapper{

@@ -2,53 +2,61 @@ package org.reactiveminds.kron.core.impl;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.reactiveminds.kron.model.JobEntry;
+import org.reactiveminds.kron.model.JobEntryRepo;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.hazelcast.core.MapStore;
-
+/**
+ * @deprecated
+ * @author Sutanu_Dalui
+ *
+ */
 class JobMasterStore implements MapStore<String, JobEntry> {
 
+	@Autowired
+	JobEntryRepo repository;
 	@Override
 	public JobEntry load(String key) {
-		// TODO Auto-generated method stub
-		return null;
+		return repository.findById(key).get();
 	}
 
 	@Override
 	public Map<String, JobEntry> loadAll(Collection<String> keys) {
-		// TODO Auto-generated method stub
-		return null;
+		return StreamSupport.stream(repository.findAllById(keys).spliterator(), false)
+		.collect(Collectors.toMap(JobEntry::getJobName, Function.identity()));
 	}
 
 	@Override
 	public Iterable<String> loadAllKeys() {
-		// TODO Auto-generated method stub
-		return null;
+		return StreamSupport.stream(repository.findAll().spliterator(), false)
+				.map(JobEntry::getJobName)
+				.collect(Collectors.toList());
 	}
 
 	@Override
 	public void store(String key, JobEntry value) {
-		// TODO Auto-generated method stub
-		
+		repository.save(value);
 	}
 
 	@Override
 	public void storeAll(Map<String, JobEntry> map) {
-		// TODO Auto-generated method stub
-		
+		repository.saveAll(map.values());
 	}
 
 	@Override
 	public void delete(String key) {
-		// TODO Auto-generated method stub
-		
+		repository.deleteById(key);
 	}
 
 	@Override
 	public void deleteAll(Collection<String> keys) {
-		// TODO Auto-generated method stub
-		
+		for(String k : keys)
+			delete(k);
 	}
 
 }

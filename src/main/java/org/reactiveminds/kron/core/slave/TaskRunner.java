@@ -8,9 +8,11 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
-import org.reactiveminds.kron.dto.CommandAndTarget;
+import org.reactiveminds.kron.core.DistributionService;
+import org.reactiveminds.kron.core.vo.ExecuteCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
@@ -24,13 +26,14 @@ class TaskRunner implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger("TaskRunner");
 	@Value("${kron.worker.goblerThreadEnable:false}")
 	private boolean goblerThreadEnable;
-	public TaskRunner(CommandAndTarget taskCommand) {
+	public TaskRunner(ExecuteCommand taskCommand) {
 		super();
 		this.taskCommand = taskCommand;
 	}
-	private CommandAndTarget taskCommand;
+	private ExecuteCommand taskCommand;
 	private String defaultWorkDir;
-	
+	@Autowired
+	private DistributionService service;
 	public void setDefaultWorkDir(String workDir) {
 		this.defaultWorkDir = workDir;
 	}
@@ -79,11 +82,14 @@ class TaskRunner implements Runnable {
 
 	    return 0;
 	}
+	//9800841527
 	@Override
 	public void run() {
 		log.info("["+taskCommand.getJobName()+"] Executing "+taskCommand.getExecution().getJobCommand());
 		Process proc = null;
-		try {
+		try 
+		{
+			service.updateJobRunStart(taskCommand.getExecutionId(), System.currentTimeMillis());
 			ProcessBuilder builder = new ProcessBuilder(taskCommand.getExecution().getJobCommand().split(" "));
 			builder.directory(ResourceUtils.getFile(StringUtils.hasText(taskCommand.getExecution().getWorkDir()) ? taskCommand.getExecution().getWorkDir() : defaultWorkDir));
 			builder.redirectErrorStream(true);
@@ -98,19 +104,23 @@ class TaskRunner implements Runnable {
 				}
 				int e = proc.waitFor();
 				log.info("["+taskCommand.getJobName()+"] Exit code: "+e);
+				
 				if (goblerThreadEnable) {
 					sg.join(TimeUnit.SECONDS.toMillis(10));
 				}
+				service.updateJobRunEnd(taskCommand.getExecutionId(), System.currentTimeMillis(), e, null);
 			}
 		} 
 		catch (IOException e) {
 			log.error("Error while executing job - "+taskCommand.getJobName(), e);
+			service.updateJobRunEnd(taskCommand.getExecutionId(), System.currentTimeMillis(), 1, e);
 		} 
 		catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 			if (proc != null) {
 				proc.destroy();
 			}
+			service.updateJobRunEnd(taskCommand.getExecutionId(), System.currentTimeMillis(), 1, e);
 		}
 	}
 }

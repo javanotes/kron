@@ -12,6 +12,7 @@ import org.hyperic.sigar.CpuPerc;
 import org.hyperic.sigar.Mem;
 import org.hyperic.sigar.Sigar;
 import org.hyperic.sigar.SigarException;
+import org.springframework.boot.system.JavaVersion;
 
 public final class SystemUsage implements Runnable{
 
@@ -67,14 +68,40 @@ public final class SystemUsage implements Runnable{
 		platform = os.getArch();
 	}
 	private static void checkSigarSetup() {
-		try {
+		JavaVersion version = JavaVersion.getJavaVersion();
+		if(version == JavaVersion.NINE) {
+			//Sigar is crashing on java 9 (tested on Windows 10)
+			/*
+			 	Current thread (0x000001cc478b4000):  JavaThread "main" [_thread_in_native, id=16304, stack(0x0000007dd0d00000,0x0000007dd0e00000)]
+				Stack: [0x0000007dd0d00000,0x0000007dd0e00000],  sp=0x0000007dd0dfcee0,  free space=1011k
+				Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+				C  [sigar-amd64-winnt.dll+0x14ed4]
+				C  [sigar-amd64-winnt.dll+0x22078]
+				C  0x000001cc51868f1c
+				
+				Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+				j  org.hyperic.sigar.Sigar.getCpuInfoList()[Lorg/hyperic/sigar/CpuInfo;+0
+				j  org.reactiveminds.kron.utils.SystemInfo.gatherStaticInfo()V+9
+				j  org.reactiveminds.kron.utils.SystemInfo.<clinit>()V+25
+				v  ~StubRoutines::call_stub
+				j  org.reactiveminds.kron.model.NodeInfo.useJRESupportToGather()V+0
+				j  org.reactiveminds.kron.core.slave.SystemInfoDaemon.init()V+0
+				v  ~StubRoutines::call_stub
+			 
+			 */
+			isSigarEnabled = false;
+			return;
+		}
+		try 
+		{
 			Class<?> clazz = Class.forName("org.hyperic.sigar.Sigar");
 			try {
 				Method m = clazz.getMethod("load");
 				m.invoke(null);
 			} catch (NoSuchMethodException | SecurityException e) {}
 			clazz.getDeclaredConstructor().newInstance();
-		} catch (Exception e) {
+		} 
+		catch (Exception e) {
 			System.err.println("WARN : Sigar not available, will use JRE support for system info * "+e.getMessage());
 			isSigarEnabled = false;
 		}
@@ -99,10 +126,11 @@ public final class SystemUsage implements Runnable{
 	}
 	static {
 		checkSigarSetup();
-		if(isSigarEnabled)
+		if(isSigarEnabled) {
 			try {
 				gatherStaticInfo();
 			} catch (InterruptedException e) {Thread.currentThread().interrupt();}
+		}
 	}
 	private void useSigar() {
 		Sigar sigar = new Sigar();

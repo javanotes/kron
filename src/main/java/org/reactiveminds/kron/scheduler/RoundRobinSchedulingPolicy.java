@@ -1,12 +1,12 @@
 package org.reactiveminds.kron.scheduler;
 
-import org.reactiveminds.kron.core.SchedulingPolicy;
-import org.reactiveminds.kron.dto.CommandAndTarget;
+import org.reactiveminds.kron.core.WorkerAllocationPolicy;
+import org.reactiveminds.kron.core.vo.ExecuteCommand;
 
-class RoundRobinSchedulingPolicy implements SchedulingPolicy {
+class RoundRobinSchedulingPolicy implements WorkerAllocationPolicy {
 
 	@Override
-	public void allocate(CommandAndTarget command) {
+	public void allocate(ExecuteCommand command) {
 		throw new UnsupportedOperationException();
 	}
 

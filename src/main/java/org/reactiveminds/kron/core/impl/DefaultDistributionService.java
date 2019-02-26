@@ -1,5 +1,6 @@
 package org.reactiveminds.kron.core.impl;
 
+import java.util.Date;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Observable;
@@ -7,15 +8,20 @@ import java.util.Observer;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.reactiveminds.kron.core.DistributionService;
 import org.reactiveminds.kron.core.JobEntryFilter;
 import org.reactiveminds.kron.core.JobEntryListener;
 import org.reactiveminds.kron.core.LeaderElectNotifier;
 import org.reactiveminds.kron.core.MessageCallback;
-import org.reactiveminds.kron.dto.CommandAndTarget;
+import org.reactiveminds.kron.core.vo.CommandTarget;
 import org.reactiveminds.kron.err.OperationNotPermittedException;
 import org.reactiveminds.kron.model.JobEntry;
+import org.reactiveminds.kron.model.JobEntryRepo;
+import org.reactiveminds.kron.model.JobRunEntry;
+import org.reactiveminds.kron.model.JobRunEntry.RunState;
 import org.reactiveminds.kron.model.NodeInfo;
 import org.reactiveminds.kron.utils.JsonMapper;
 import org.reactiveminds.kron.utils.NodeInfoComparator;
@@ -23,7 +29,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
 
 import com.hazelcast.core.Client;
 import com.hazelcast.core.EntryEvent;
@@ -38,13 +43,14 @@ import com.hazelcast.core.MessageListener;
 import com.hazelcast.internal.ascii.rest.RestValue;
 import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryUpdatedListener;
-import com.hazelcast.util.StringUtil;
 
 @Service
 class DefaultDistributionService implements DistributionService {
 
 	@Autowired
 	private HazelcastInstance hazelcast;
+	@Autowired
+	private JobEntryRepo jobRepo;
 	@Value("${kron.master.workerStatExpirySecs:10}")
 	private int nodeinfoExpiry;
 	private volatile boolean isElectedLeader;
@@ -83,23 +89,23 @@ class DefaultDistributionService implements DistributionService {
 	}
 	
 	@Override
-	public void registerWorkerChannel(MessageCallback<CommandAndTarget> callback) {
+	public void registerWorkerChannel(MessageCallback<CommandTarget> callback) {
 		if(!isWorkerNode())
 			throw new OperationNotPermittedException("Cannot register worker channel in MASTER mode");
 		
-		ITopic<CommandAndTarget> channel = hazelcast.getTopic(COMM_CHANNEL);
-		channel.addMessageListener(new MessageListener<CommandAndTarget>() {
+		ITopic<CommandTarget> channel = hazelcast.getTopic(COMM_CHANNEL);
+		channel.addMessageListener(new MessageListener<CommandTarget>() {
 			
 			@Override
-			public void onMessage(Message<CommandAndTarget> message) {
+			public void onMessage(Message<CommandTarget> message) {
 				callback.onMessage(message.getMessageObject());
 			}
 		});
 		
 	}
 	@Override
-	public void submitWorkerCommand(CommandAndTarget command) {
-		ITopic<CommandAndTarget> channel = hazelcast.getTopic(COMM_CHANNEL);
+	public void submitWorkerCommand(CommandTarget command) {
+		ITopic<CommandTarget> channel = hazelcast.getTopic(COMM_CHANNEL);
 		channel.publish(command);
 	}
 	@Async
@@ -180,10 +186,11 @@ class DefaultDistributionService implements DistributionService {
 	public List<JobEntry> getJobEntries(JobEntryFilter filter) {
 		IMap<String, RestValue> map = hazelcast.getMap(JOB_MASTER);
 		//client side filtering, but it should be okay?
-		return map.entrySet().stream().map(e -> toJobEntry(e.getValue()))
-		.filter(filter)
-		.collect(Collectors.toList());
-		
+		Stream<JobEntry> dbStream = StreamSupport.stream(jobRepo.findAll().spliterator(), false)
+		.filter(filter);
+		Stream<JobEntry> hzStream = map.entrySet().stream().map(e -> JsonMapper.toJobEntry(e.getValue()))
+		.filter(filter);
+		return Stream.concat(hzStream, dbStream).distinct().collect(Collectors.toList());
 	}
 
 	@Override
@@ -191,11 +198,6 @@ class DefaultDistributionService implements DistributionService {
 		return hazelcast.getLocalEndpoint() instanceof Client;
 	}
 
-	private static JobEntry toJobEntry(RestValue val) {
-		String cType = StringUtil.bytesToString(val.getContentType());
-		Assert.isTrue(cType.toLowerCase().contains("json"), "Entry added over rest is not a permitted content-type: "+cType);
-		return JsonMapper.deserialize(val.getValue(), JobEntry.class);
-	}
 	private static class RestListener implements EntryAddedListener<String, RestValue>, EntryUpdatedListener<String, RestValue>{
 
 		private RestListener(JobEntryListener listener) {
@@ -211,7 +213,7 @@ class DefaultDistributionService implements DistributionService {
 
 		@Override
 		public void entryAdded(EntryEvent<String, RestValue> event) {
-			listener.onEntryAdded(toJobEntry(event.getValue()));
+			listener.onEntryAdded(JsonMapper.toJobEntry(event.getValue()));
 		}
 		
 	}
@@ -225,4 +227,71 @@ class DefaultDistributionService implements DistributionService {
 		hazelcast.getMap(JOB_MASTER).addEntryListener(new RestListener(listener), true);
 	}
 
+	@Override
+	public long getNextSequence(String key) {
+		return hazelcast.getFlakeIdGenerator(key).newId();
+	}
+
+	
+	@Override
+	public void createJobRunEntry(JobRunEntry entry) {
+		 IMap<String, JobRunEntry> map = hazelcast.getMap(JOB_RUN);
+		 map.set(entry.getDBKey(), entry);
+	}
+
+	@Override
+	public void updateJobRunStart(String id, long startTime) {
+		IMap<String, JobRunEntry> map = hazelcast.getMap(JOB_RUN);
+		if(map.containsKey(id)) {
+			map.lock(id);
+			try {
+				JobRunEntry entry = map.get(id);
+				entry.setState(RunState.RUNNING);
+				entry.setStartTime(new Date(startTime));
+				map.set(id, entry);
+			}
+			finally {
+				map.unlock(id);
+			}
+		}
+	}
+
+	@Override
+	public void updateJobRunEnd(String id, long endTime, int exitCode, Throwable exception) {
+		IMap<String, JobRunEntry> map = hazelcast.getMap(JOB_RUN);
+		if(map.containsKey(id)) {
+			map.lock(id);
+			try {
+				JobRunEntry entry = map.get(id);
+				entry.setEndTime(new Date(endTime));
+				entry.setExitCode(exitCode);
+				if(exception != null) {
+					entry.setState(RunState.ERROR);
+					entry.setError(exception.getMessage());
+				}
+				else {
+					entry.setState(RunState.FINISH);
+				}
+				map.set(id, entry);
+			}
+			finally {
+				map.unlock(id);
+			}
+		}
+	}
+
+	/*
+	 * @Override
+	public void submitJob(ScheduleCommand command, JobRunEntry entry) {
+		TransactionContext ctx = hazelcast.newTransactionContext();
+		hazelcast.executeTransaction(new TransactionalTask<Void>() {
+
+			@Override
+			public Void execute(TransactionalTaskContext context) throws TransactionException {
+				// TODO Auto-generated method stub
+				return null;
+			}
+		});
+	}
+	 */
 }

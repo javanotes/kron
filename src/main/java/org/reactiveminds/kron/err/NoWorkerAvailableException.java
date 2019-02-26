@@ -1,8 +1,6 @@
 package org.reactiveminds.kron.err;
 
-import org.springframework.scheduling.SchedulingException;
-
-public class NoWorkerAvailableException extends SchedulingException {
+public class NoWorkerAvailableException extends AllocationPolicyException {
 
 	/**
 	 * 

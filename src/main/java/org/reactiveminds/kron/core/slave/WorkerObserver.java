@@ -1,10 +1,10 @@
 package org.reactiveminds.kron.core.slave;
 
+import org.reactiveminds.kron.core.Command;
 import org.reactiveminds.kron.core.DistributionService;
 import org.reactiveminds.kron.core.SchedulingSupport;
+import org.reactiveminds.kron.core.vo.CommandTarget;
 import org.reactiveminds.kron.core.MessageCallback;
-import org.reactiveminds.kron.dto.Command;
-import org.reactiveminds.kron.dto.CommandAndTarget;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Order(2)
-public class WorkerObserver implements CommandLineRunner, MessageCallback<CommandAndTarget> {
+public class WorkerObserver implements CommandLineRunner, MessageCallback<CommandTarget> {
 
 	@Autowired
 	DistributionService distService;
@@ -33,12 +33,12 @@ public class WorkerObserver implements CommandLineRunner, MessageCallback<Comman
 		}
 	}
 
-	private boolean isMatchedTargetFilter(CommandAndTarget message) {
+	private boolean isMatchedTargetFilter(CommandTarget message) {
 		return distService.isWorkerNode() && (distService.getSelfId().equals(message.getTargetPattern())
-				|| message.getTargetPattern().equals(CommandAndTarget.TARGET_ALL));
+				|| message.getTargetPattern().equals(CommandTarget.TARGET_ALL));
 	}
 	@Override
-	public void onMessage(CommandAndTarget message) {
+	public void onMessage(CommandTarget message) {
 		if(isMatchedTargetFilter(message)) {
 			Command cmd = message.getCommand();
 			switch(cmd) {

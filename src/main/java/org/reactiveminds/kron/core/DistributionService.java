@@ -4,8 +4,9 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.TimeUnit;
 
-import org.reactiveminds.kron.dto.CommandAndTarget;
+import org.reactiveminds.kron.core.vo.CommandTarget;
 import org.reactiveminds.kron.model.JobEntry;
+import org.reactiveminds.kron.model.JobRunEntry;
 import org.reactiveminds.kron.model.NodeInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,28 +21,105 @@ public interface DistributionService {
 	String COMM_CHANNEL = "MASTER_TO_SLAVE";
 	String ACK_CHANNEL = "SLAVE_TO_MASTER";
 	String JOB_MASTER = "JOB_MASTER";
-	String EXEC_STATUS = "EXEC_STATUS";
-	String EXEC_QUEUE = "EXEC_QUEUE";
+	String JOB_RUN = "EXEC_STATUS";
 	String WORKERID = "WORKERID";
 	String NODE_INFO = "NODE_INFO";
-	
+	/**
+	 * 
+	 * @param observer
+	 */
 	void registerLeaderCallback(LeaderElectNotifier observer);
+	/**
+	 * 
+	 */
 	void tryElectAsLeader();
-	
-	void registerWorkerChannel(MessageCallback<CommandAndTarget> callback);
+	/**
+	 * 
+	 * @param key
+	 * @return
+	 */
+	long getNextSequence(String key);
+	/**
+	 * 
+	 * @param callback
+	 */
+	void registerWorkerChannel(MessageCallback<CommandTarget> callback);
+	/**
+	 * 
+	 * @param callback
+	 */
 	void registerMasterChannel(MessageCallback<String> callback);
-	
-	void submitWorkerCommand(CommandAndTarget command);
+	/**
+	 * 
+	 * @param command
+	 */
+	void submitWorkerCommand(CommandTarget command);
+	/**
+	 * 
+	 * @param ack
+	 */
 	void submitMasterAck(String ack);
-	//void saveJobEntry(JobEntry entry);
+	/**
+	 * 
+	 * @param entry
+	 */
+	void createJobRunEntry(JobRunEntry entry);
+	/**
+	 * 
+	 * @param id
+	 * @param startTime
+	 */
+	void updateJobRunStart(String id, long startTime);
+	/**
+	 * 
+	 * @param id
+	 * @param endTime
+	 * @param exception
+	 */
+	void updateJobRunEnd(String id, long endTime, int exitCode, Throwable exception);
+	/**
+	 * 
+	 * @param filter
+	 * @return
+	 */
 	List<JobEntry> getJobEntries(JobEntryFilter filter);
+	/**
+	 * 
+	 * @return
+	 */
 	boolean isElectedLeader();
+	/**
+	 * 
+	 * @return
+	 */
 	String getSelfId();
+	/**
+	 * 
+	 * @return
+	 */
 	NavigableSet<NodeInfo> getWorkerSnapshot();
+	/**
+	 * 
+	 * @return
+	 */
 	boolean isWorkerNode();
+	/**
+	 * 
+	 * @param info
+	 */
 	void updateWorkerSystemInfo(NodeInfo info);
-	
+	/**
+	 * 
+	 * @param name
+	 */
 	void countdownLatch(String name);
+	/**
+	 * 
+	 * @param name
+	 * @param expiry
+	 * @param unit
+	 * @return
+	 */
 	boolean awaitWorkerLatch(String name, long expiry, TimeUnit unit);
 	/**
 	 * 

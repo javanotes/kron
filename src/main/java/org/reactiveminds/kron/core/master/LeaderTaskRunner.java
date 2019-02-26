@@ -7,6 +7,7 @@ import org.reactiveminds.kron.core.JobEntryFilter;
 import org.reactiveminds.kron.core.JobEntryListener;
 import org.reactiveminds.kron.core.JobScheduler;
 import org.reactiveminds.kron.model.JobEntry;
+import org.reactiveminds.kron.model.JobEntryRepo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanFactory;
@@ -26,7 +27,8 @@ class LeaderTaskRunner implements Runnable, JobEntryListener {
 	BeanFactory beans;
 	@Autowired
 	JobScheduler jobRegistry;
-	
+	@Autowired
+	JobEntryRepo jobRepo;
 	private static Logger log = LoggerFactory.getLogger(LeaderTaskRunner.class);
 	@Override
 	public void run() {
@@ -40,6 +42,8 @@ class LeaderTaskRunner implements Runnable, JobEntryListener {
 	}
 	@Override
 	public void onEntryAdded(JobEntry job) {
+		//TODO transactional
+		jobRepo.save(job);
 		jobRegistry.scheduleJob(job);
 	}
 	

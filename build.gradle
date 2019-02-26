@@ -27,6 +27,10 @@ dependencies {
     implementation('com.hazelcast:hazelcast-client:3.11')
     implementation('com.hazelcast:hazelcast:3.11')
     implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.9.7'
+    // JPA Data (We are going to use Repositories, Entities, Hibernate, etc...)
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // Use MySQL Connector-J
+    implementation 'mysql:mysql-connector-java'
     testImplementation('org.springframework.boot:spring-boot-starter-test')
     implementation files('lib/sigar.jar')
 }

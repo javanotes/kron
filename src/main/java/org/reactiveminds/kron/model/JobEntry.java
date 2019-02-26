@@ -2,10 +2,13 @@ package org.reactiveminds.kron.model;
 
 import java.io.IOException;
 
+import javax.persistence.Entity;
+import javax.persistence.Id;
+
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
 import com.hazelcast.nio.serialization.DataSerializable;
-
+@Entity
 public class JobEntry implements DataSerializable {
 
 	@Override
@@ -43,6 +46,7 @@ public class JobEntry implements DataSerializable {
 	private boolean isEnabled = true;
 	private ExecutionRequest job;
 	private String cronSchedule;
+	@Id
 	private String jobName;
 	private String startFrom;
 	public String getCronSchedule() {

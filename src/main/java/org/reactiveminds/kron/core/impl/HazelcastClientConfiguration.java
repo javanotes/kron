@@ -29,7 +29,7 @@ class HazelcastClientConfiguration {
 	@Bean
 	public HazelcastInstance hazelcastInstance()
 			throws IOException {
-		DistributionService.LOG.info("Booting Hazelcast client ..");
+		DistributionService.LOG.info("Starting Hazelcast client service ..");
 		Resource config = null;
 		if(StringUtils.hasText(configXml)) {
 			config = context.getResource(configXml);

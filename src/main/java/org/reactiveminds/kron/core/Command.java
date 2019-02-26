@@ -1,4 +1,4 @@
-package org.reactiveminds.kron.dto;
+package org.reactiveminds.kron.core;
 
 public enum Command {
 
