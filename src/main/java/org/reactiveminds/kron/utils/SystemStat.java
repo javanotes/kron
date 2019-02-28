@@ -1,20 +1,23 @@
 package org.reactiveminds.kron.utils;
 
 import java.lang.management.ManagementFactory;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.hyperic.sigar.CpuInfo;
 import org.hyperic.sigar.CpuPerc;
 import org.hyperic.sigar.Mem;
 import org.hyperic.sigar.Sigar;
 import org.hyperic.sigar.SigarException;
+import org.jvnet.winp.WinProcess;
 import org.springframework.boot.system.JavaVersion;
 
-public final class SystemUsage implements Runnable{
+public final class SystemStat implements Runnable{
 
 	private static double roundTo2Decimal(double d) {
 		return roundToDecimal(d, 2);
@@ -49,13 +52,13 @@ public final class SystemUsage implements Runnable{
 	private double pctFreeMemory;
 	private long lastTimestamp;
 	
-	private static boolean isSigarEnabled = true;
+	private static AtomicBoolean isSigarEnabled = new AtomicBoolean(true);
 	/**
 	 * Disables the use of Sigar library (even if present), and 
 	 * falls back to com.sun.management.OperatingSystemMXBean probes.
 	 */
 	public static void useJRESupportToGather() {
-		isSigarEnabled = false;
+		isSigarEnabled.compareAndSet(true, false);
 	}
 	@SuppressWarnings("restriction")
 	private void useJava() {
@@ -89,7 +92,7 @@ public final class SystemUsage implements Runnable{
 				v  ~StubRoutines::call_stub
 			 
 			 */
-			isSigarEnabled = false;
+			isSigarEnabled.compareAndSet(true, false);
 			return;
 		}
 		try 
@@ -103,7 +106,7 @@ public final class SystemUsage implements Runnable{
 		} 
 		catch (Exception e) {
 			System.err.println("WARN : Sigar not available, will use JRE support for system info * "+e.getMessage());
-			isSigarEnabled = false;
+			isSigarEnabled.compareAndSet(true, false);
 		}
 	}
 	private static int numOfCores = 0, numOfProcessors = 0;
@@ -118,18 +121,26 @@ public final class SystemUsage implements Runnable{
 				numOfCores =  cpu.getTotalCores();
 				numOfProcessors = cpu.getTotalSockets();
 				platform = cpu.getVendor() + " " + cpu.getModel();
-				setTotalCpuCacheSize(getTotalCpuCacheSize() + cpu.getCacheSize());
+				totalCpuCacheSize = (getTotalCpuCacheSize() + cpu.getCacheSize());
 			}
 		} catch (SigarException e) {
 			e.printStackTrace();
 		}
+		finally {
+			sigar.close();
+		}
 	}
 	static {
 		checkSigarSetup();
-		if(isSigarEnabled) {
+		if(isSigarEnabled.get()) {
 			try {
 				gatherStaticInfo();
 			} catch (InterruptedException e) {Thread.currentThread().interrupt();}
+		}
+	}
+	public static void getProcessCpu(long pid) {
+		if(isSigarEnabled.get()) {
+			
 		}
 	}
 	private void useSigar() {
@@ -148,10 +159,13 @@ public final class SystemUsage implements Runnable{
         } catch (SigarException se) {
             throw new RuntimeException(se);
         }
+        finally {
+        	sigar.close();
+        }
 	}
 	@Override
 	public void run() {
-		if(isSigarEnabled)
+		if(isSigarEnabled.get())
 			useSigar();
 		else
 			useJava();
@@ -189,7 +203,7 @@ public final class SystemUsage implements Runnable{
 	
 	public static void main(String[] args) throws InterruptedException {
 		Thread.sleep(2000);
-		SystemUsage sys = new SystemUsage();
+		SystemStat sys = new SystemStat();
 		sys.run();
 		System.out.println(sys);
 		sys.useJava();
@@ -198,8 +212,37 @@ public final class SystemUsage implements Runnable{
 	public static long getTotalCpuCacheSize() {
 		return totalCpuCacheSize;
 	}
-	public static void setTotalCpuCacheSize(long totalCpuCacheSize) {
-		SystemUsage.totalCpuCacheSize = totalCpuCacheSize;
-	}
 	
+	public static boolean isSigarSupported() {
+		return isSigarEnabled.get();
+		
+	}
+	/**
+	 * Get process id for a given process.
+	 * @param process
+	 * @return
+	 */
+	public static int processId(Process process)
+	{
+	    if (process.getClass().getName().equals("java.lang.UNIXProcess"))
+	    {
+	        try
+	        {
+	            Field f = process.getClass().getDeclaredField("pid");
+	            f.setAccessible(true);
+	            return f.getInt(process);
+	        }
+	        catch (Exception e)
+	        {
+	        }
+	    }
+	    else if (process.getClass().getName().equals("java.lang.Win32Process") ||
+	    		process.getClass().getName().equals("java.lang.ProcessImpl")) 
+         {
+             WinProcess wp = new WinProcess(process);
+             return wp.getPid();
+         }
+
+	    return 0;
+	}
 }

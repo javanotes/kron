@@ -8,7 +8,7 @@ import org.reactiveminds.kron.core.ScheduledDaemon;
 import org.reactiveminds.kron.model.NodeInfo;
 import org.reactiveminds.kron.scheduler.vo.Schedule;
 import org.reactiveminds.kron.scheduler.vo.SecSchedule;
-import org.reactiveminds.kron.utils.SystemUsage;
+import org.reactiveminds.kron.utils.SystemStat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -29,7 +29,7 @@ class SystemInfoDaemon implements ScheduledDaemon {
 	@PostConstruct
 	private void init() {
 		if (disableSigar) {
-			SystemUsage.useJRESupportToGather();
+			SystemStat.useJRESupportToGather();
 		}
 	}
 	@Override

@@ -2,7 +2,7 @@ package org.reactiveminds.kron.model;
 
 import java.io.IOException;
 
-import org.reactiveminds.kron.utils.SystemUsage;
+import org.reactiveminds.kron.utils.SystemStat;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;
@@ -21,7 +21,7 @@ public class NodeInfo implements DataSerializable {
 		this.workerId = workerId;
 	}
 
-	public SystemUsage getSysInfo() {
+	public SystemStat getSysInfo() {
 		return sysInfo;
 	}
 	/**
@@ -29,16 +29,16 @@ public class NodeInfo implements DataSerializable {
 	 * Will erase previous info run and calculate fresh new.
 	 */
 	public void gather() {
-		sysInfo = new SystemUsage();
+		sysInfo = new SystemStat();
 		sysInfo.run();
 	}
-	public void setSysInfo(SystemUsage sysInfo) {
+	public void setSysInfo(SystemStat sysInfo) {
 		this.sysInfo = sysInfo;
 	}
 
 	private int jobsRunning;
 	private String workerId;
-	private SystemUsage sysInfo;
+	private SystemStat sysInfo;
 	@Override
 	public void writeData(ObjectDataOutput out) throws IOException {
 		out.writeUTF(workerId);
@@ -54,7 +54,7 @@ public class NodeInfo implements DataSerializable {
 		setJobsRunning(in.readInt());
 		byte[] b = new byte[in.readInt()];
 		in.readFully(b);
-		sysInfo = new SystemUsage();
+		sysInfo = new SystemStat();
 		sysInfo.fromBytes(b);
 	}
 

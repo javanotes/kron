@@ -33,5 +33,6 @@ dependencies {
     implementation 'mysql:mysql-connector-java'
     testImplementation('org.springframework.boot:spring-boot-starter-test')
     implementation files('lib/sigar.jar')
+    implementation group: 'org.jvnet.winp', name: 'winp', version: '1.28'
 }
 
