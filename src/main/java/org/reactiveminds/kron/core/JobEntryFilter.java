@@ -2,7 +2,7 @@ package org.reactiveminds.kron.core;
 
 import java.util.function.Predicate;
 
-import org.reactiveminds.kron.model.JobEntry;
+import org.reactiveminds.kron.core.model.JobEntry;
 /**
  * 
  * @author Sutanu_Dalui

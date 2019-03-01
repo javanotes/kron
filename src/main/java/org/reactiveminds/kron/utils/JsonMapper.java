@@ -1,7 +1,7 @@
 package org.reactiveminds.kron.utils;
 
+import org.reactiveminds.kron.core.model.JobEntry;
 import org.reactiveminds.kron.err.KronRuntimeException;
-import org.reactiveminds.kron.model.JobEntry;
 import org.springframework.util.Assert;
 
 import com.fasterxml.jackson.core.JsonProcessingException;

@@ -17,7 +17,7 @@ import org.hyperic.sigar.SigarException;
 import org.jvnet.winp.WinProcess;
 import org.springframework.boot.system.JavaVersion;
 
-public final class SystemStat implements Runnable{
+public class SystemStat implements Runnable{
 
 	private static double roundTo2Decimal(double d) {
 		return roundToDecimal(d, 2);

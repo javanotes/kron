@@ -3,7 +3,7 @@ package org.reactiveminds.kron.core.vo;
 import java.io.IOException;
 
 import org.reactiveminds.kron.core.Command;
-import org.reactiveminds.kron.model.ExecutionRequest;
+import org.reactiveminds.kron.core.model.ExecutionRequest;
 
 import com.hazelcast.nio.ObjectDataInput;
 import com.hazelcast.nio.ObjectDataOutput;

@@ -1,6 +1,6 @@
 package org.reactiveminds.kron.core;
 
-import org.reactiveminds.kron.model.JobEntry;
+import org.reactiveminds.kron.core.model.JobEntry;
 /**
  * A callback interface whenever a new job is submitted over REST
  * @author Sutanu_Dalui

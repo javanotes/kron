@@ -1,10 +1,14 @@
 package org.reactiveminds.kron.core;
 
+import org.reactiveminds.kron.core.model.JobEntry;
 import org.reactiveminds.kron.err.KronRuntimeException;
-import org.reactiveminds.kron.model.JobEntry;
 import org.springframework.util.Assert;
 
 public interface JobScheduler {
+	String TODAY = "TODAY";
+	String TOMORROW = "TOMORROW";
+	String NOW = "NOW";
+	
 	String KEY_SEP = "#";
 	public static String makeExecutionKey(String jobName, long seq) {
 		return jobName + KEY_SEP + seq;

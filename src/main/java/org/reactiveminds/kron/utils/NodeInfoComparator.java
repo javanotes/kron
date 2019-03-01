@@ -2,7 +2,7 @@ package org.reactiveminds.kron.utils;
 
 import java.util.Comparator;
 
-import org.reactiveminds.kron.model.NodeInfo;
+import org.reactiveminds.kron.core.model.NodeInfo;
 
 public class NodeInfoComparator implements Comparator<NodeInfo> {
 

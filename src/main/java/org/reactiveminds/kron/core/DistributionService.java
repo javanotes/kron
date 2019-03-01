@@ -4,10 +4,10 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.TimeUnit;
 
+import org.reactiveminds.kron.core.model.JobEntry;
+import org.reactiveminds.kron.core.model.JobRunEntry;
+import org.reactiveminds.kron.core.model.NodeInfo;
 import org.reactiveminds.kron.core.vo.CommandTarget;
-import org.reactiveminds.kron.model.JobEntry;
-import org.reactiveminds.kron.model.JobRunEntry;
-import org.reactiveminds.kron.model.NodeInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 /**

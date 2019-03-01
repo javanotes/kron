@@ -1,6 +1,6 @@
 package org.reactiveminds.kron.core;
 
-import org.reactiveminds.kron.scheduler.vo.Schedule;
+import org.reactiveminds.kron.core.scheduler.Schedule;
 
 /**
  * The core interface to define underlying scheduling (and asynchronous execution) mechanism. By default

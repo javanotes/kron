@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.reactiveminds.kron.model.ExecutionEntry;
-import org.reactiveminds.kron.model.ExecutionRequest;
+import org.reactiveminds.kron.core.model.ExecutionEntry;
+import org.reactiveminds.kron.core.model.ExecutionRequest;
 import org.springframework.scheduling.support.CronSequenceGenerator;
 import org.springframework.util.StringUtils;
 
