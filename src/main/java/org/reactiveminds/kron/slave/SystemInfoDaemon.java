@@ -4,7 +4,7 @@ import javax.annotation.PostConstruct;
 
 import org.reactiveminds.kron.core.DistributionService;
 import org.reactiveminds.kron.core.SchedulingSupport;
-import org.reactiveminds.kron.core.model.NodeInfo;
+import org.reactiveminds.kron.core.model.NodeStat;
 import org.reactiveminds.kron.core.scheduler.Schedule;
 import org.reactiveminds.kron.core.scheduler.SecSchedule;
 import org.reactiveminds.kron.core.ScheduledDaemon;
@@ -34,7 +34,7 @@ class SystemInfoDaemon implements ScheduledDaemon {
 	}
 	@Override
 	public void run() {
-		NodeInfo n = new NodeInfo();
+		NodeStat n = new NodeStat();
 		n.setWorkerId(distService.getSelfId());
 		n.setJobsRunning(executors.executionCapacity());
 		n.gather();

@@ -1,5 +1,9 @@
 package org.reactiveminds.kron.core;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import org.reactiveminds.kron.core.scheduler.Schedule;
 
 /**
@@ -39,4 +43,13 @@ public interface SchedulingSupport{
 	 * @return
 	 */
 	int executionCapacity();
+	/**
+	 * 
+	 * @param id
+	 * @param timeout
+	 * @param unit
+	 * @throws TimeoutException 
+	 * @throws ExecutionException 
+	 */
+	void awaitCompletion(long id, long timeout, TimeUnit unit) throws ExecutionException, TimeoutException;
 }

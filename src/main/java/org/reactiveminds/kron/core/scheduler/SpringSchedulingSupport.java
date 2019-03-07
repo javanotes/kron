@@ -4,15 +4,17 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.PreDestroy;
 
 import org.reactiveminds.kron.core.ScheduledDaemon;
 import org.reactiveminds.kron.core.SchedulingSupport;
-import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -40,7 +42,7 @@ class SpringSchedulingSupport implements SchedulingSupport {
 		private final long id;
 	}
 	@Autowired
-	private BeanFactory beanFactory;
+	private TaskScheduler scheduler;
 	@Autowired
 	private ThreadPoolTaskExecutor executor;
 	
@@ -51,11 +53,11 @@ class SpringSchedulingSupport implements SchedulingSupport {
 		Schedule schedule = daemon.getSchedule();
 		ScheduledFuture<?> f;
 		if (schedule.getRepeatAfter() > 0) {
-			f = beanFactory.getBean(TaskScheduler.class).scheduleAtFixedRate(daemon, schedule.getStartTime(),
+			f = scheduler.scheduleAtFixedRate(daemon, schedule.getStartTime(),
 					schedule.getUnit().toMillis(schedule.getRepeatAfter()));
 		}
 		else
-			f = beanFactory.getBean(TaskScheduler.class).schedule(daemon, schedule.getStartTime());
+			f = scheduler.schedule(daemon, schedule.getStartTime());
 		
 		FutureWrapper wrap = new FutureWrapper(f, true);
 		futures.put(wrap.id, wrap);
@@ -76,7 +78,7 @@ class SpringSchedulingSupport implements SchedulingSupport {
 
 	@Override
 	public long schedule(Runnable daemon, String cronExpr) {
-		ScheduledFuture<?> f = beanFactory.getBean(TaskScheduler.class).schedule(daemon, new CronTrigger(cronExpr));
+		ScheduledFuture<?> f = scheduler.schedule(daemon, new CronTrigger(cronExpr));
 		FutureWrapper wrap = new FutureWrapper(f, true);
 		futures.put(wrap.id, wrap);
 		return wrap.id;
@@ -95,6 +97,17 @@ class SpringSchedulingSupport implements SchedulingSupport {
 			Entry<Long, FutureWrapper> e = iter.next();
 			e.getValue().getF().cancel(true);
 			iter.remove();
+		}
+	}
+
+	@Override
+	public void awaitCompletion(long id, long timeout, TimeUnit unit) throws ExecutionException, TimeoutException {
+		if(futures.containsKey(id)) {
+			try {
+				futures.get(id).getF().get(timeout, unit);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
 		}
 	}
 

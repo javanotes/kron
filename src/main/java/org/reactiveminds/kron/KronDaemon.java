@@ -47,4 +47,10 @@ public class KronDaemon implements ApplicationContextAware{
 		}
 		return applicationContext.getBean(requiredType);
 	}
+	public static <T> T getBean(String name, Class<T> requiredType) {
+		if(applicationContext == null) {
+			throw new KronConfigurationException("Spring applicationContext not initialized!");
+		}
+		return applicationContext.getBean(name, requiredType);
+	}
 }

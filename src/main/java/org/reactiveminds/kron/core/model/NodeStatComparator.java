@@ -1,13 +1,11 @@
-package org.reactiveminds.kron.utils;
+package org.reactiveminds.kron.core.model;
 
 import java.util.Comparator;
 
-import org.reactiveminds.kron.core.model.NodeInfo;
-
-public class NodeInfoComparator implements Comparator<NodeInfo> {
+public class NodeStatComparator implements Comparator<NodeStat> {
 
 	@Override
-	public int compare(NodeInfo o1, NodeInfo o2) {
+	public int compare(NodeStat o1, NodeStat o2) {
 		int c = Integer.compare(o1.getJobsRunning(), o2.getJobsRunning());
 		if(c != 0)
 			return c;

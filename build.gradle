@@ -34,5 +34,6 @@ dependencies {
     testImplementation('org.springframework.boot:spring-boot-starter-test')
     implementation files('lib/sigar.jar')
     implementation group: 'org.jvnet.winp', name: 'winp', version: '1.28'
+    runtime('com.h2database:h2')
 }
 

@@ -42,12 +42,14 @@ public class ExecuteCommand extends CommandTarget {
 	protected String executionId;
 	protected String jobName;
 	protected ExecutionRequest execution;
+	private boolean embeddedExec = false;
 	@Override
 	public void writeData(ObjectDataOutput out) throws IOException {
 		super.writeData(out);
 		out.writeUTF(getJobName());
 		execution.writeData(out);
 		out.writeUTF(executionId);
+		out.writeBoolean(embeddedExec);
 	}
 	@Override
 	public void readData(ObjectDataInput in) throws IOException {
@@ -56,5 +58,12 @@ public class ExecuteCommand extends CommandTarget {
 		execution = new ExecutionRequest();
 		execution.readData(in);
 		setExecutionId(in.readUTF());
+		setEmbeddedExec(in.readBoolean());
+	}
+	public boolean isEmbeddedExec() {
+		return embeddedExec;
+	}
+	public void setEmbeddedExec(boolean embeddedExec) {
+		this.embeddedExec = embeddedExec;
 	}
 }

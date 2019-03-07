@@ -1,17 +1,12 @@
 package org.reactiveminds.kron.slave;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 import org.reactiveminds.kron.core.DistributionService;
 import org.reactiveminds.kron.core.SchedulingSupport;
 import org.reactiveminds.kron.core.TaskProxy;
 import org.reactiveminds.kron.core.vo.ExecuteCommand;
-import org.reactiveminds.kron.utils.SystemStat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanFactory;
@@ -20,8 +15,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-import org.springframework.util.ResourceUtils;
-import org.springframework.util.StringUtils;
 
 @Component
 @Scope(scopeName = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
@@ -51,34 +44,7 @@ class TaskRunner implements Runnable, TaskProxy {
 	public void setDefaultWorkDir(String workDir) {
 		this.defaultWorkDir = workDir;
 	}
-	private class StreamGobler extends Thread implements AutoCloseable{
-		private final BufferedReader reader;
-		private StreamGobler(InputStream stream) {
-			super(taskCommand.getJobName());
-			this.reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
-		}
-		@Override
-		public void run() {
-			String line = null;
-			try {
-				while((line = reader.readLine()) != null) {
-					log.info("> " + line);
-				}
-			} catch (IOException e) {
-				log.error("Error while reading execution output, "+ e.getMessage());
-				log.debug("", e);
-			}
-		}
-		@Override
-		public void close() {
-			try {
-				reader.close();
-			} catch (IOException e) {
-				log.warn("Error while closing output stream, "+ e.getMessage());
-				log.debug("", e);
-			}
-		}
-	}
+	
 	/* (non-Javadoc)
 	 * @see org.reactiveminds.kron.core.slave.TaskProxy#isTaskActive()
 	 */
@@ -87,63 +53,68 @@ class TaskRunner implements Runnable, TaskProxy {
 		return taskActive;
 	}
 	private volatile boolean taskActive;
-	private Process process = null;
 	
-	private int spawnProcess() throws IOException {
-		ProcessBuilder builder = new ProcessBuilder(taskCommand.getExecution().getJobCommand().split(" "));
-		builder.directory(ResourceUtils.getFile(StringUtils.hasText(taskCommand.getExecution().getWorkDir()) ? taskCommand.getExecution().getWorkDir() : defaultWorkDir));
-		builder.redirectErrorStream(true);
-		process = builder.start();
+	private Executable executable;
+	
+	private void spawnProcess() {
+		executable = new ProcessExecutable();
+		executable.setCommand(taskCommand);
+		((ProcessExecutable)executable).setDefaultWorkDir(defaultWorkDir);
+		executable.execute();
 		taskActive = true;
-		return SystemStat.processId(process);
 	}
-	private void awaitCompletion(int pid) throws InterruptedException, IOException {
+	private int awaitCompletion() throws InterruptedException, IOException {
 		long schedId = -1;
-		try(StreamGobler sg = new StreamGobler(process.getInputStream()); ProcessMonitorDaemon pmon = beans.getBean(ProcessMonitorDaemon.class, process, 1, TimeUnit.SECONDS)){
-			if (pid != 0) {
+		try(ProcessMonitorDaemon pmon = beans.getBean(ProcessMonitorDaemon.class, ((ProcessExecutable)executable).getProcess(), 1, TimeUnit.SECONDS)){
+			if (((ProcessExecutable)executable).getProcessId() != 0) {
 				schedId = scheduler.schedule(pmon);
 			}
-			if (goblerThreadEnable) {
-				sg.start();
-			}
-			else {
-				sg.run();
-			}
-			int e = process.waitFor();
-			taskActive = false;
-			log.info("["+taskCommand.getJobName()+"] Exit code: "+e);
-			
-			if (goblerThreadEnable) {
-				sg.join(TimeUnit.SECONDS.toMillis(10));
-			}
-			service.updateJobRunEnd(taskCommand.getExecutionId(), System.currentTimeMillis(), e, null);
+			return executable.awaitCompletion();
 		}
 		finally {
 			scheduler.cancel(schedId, true);
 		}
 	}
-	//9800841527
+	private int runProcessTask() throws InterruptedException, IOException {
+		spawnProcess();
+		log.info("["+taskCommand.getJobName()+"] pid: "+((ProcessExecutable)executable).getProcessId());
+		return awaitCompletion();
+	}
+	private int runEmbeddedTask() throws InterruptedException {
+		executable = new EmbeddedExecutable();
+		executable.setCommand(taskCommand);
+		taskActive = true;
+		executable.execute();
+		return executable.awaitCompletion();
+	}
+	
 	@Override
 	public void run() {
 		log.info("["+taskCommand.getJobName()+"] Executing "+taskCommand.getExecution().getJobCommand());
 		try 
 		{
 			service.updateJobRunStart(taskCommand.getExecutionId(), System.currentTimeMillis());
-			int pid = spawnProcess();
-			log.info("["+taskCommand.getJobName()+"] pid: "+pid);
-			awaitCompletion(pid);
-			
+			int exitCode = 0;
+			if (taskCommand.isEmbeddedExec()) {
+				exitCode = runEmbeddedTask();
+			}
+			else {
+				exitCode = runProcessTask();
+			}
+			taskActive = false;
+			service.updateJobRunEnd(taskCommand.getExecutionId(), System.currentTimeMillis(), exitCode, null);
 		} 
-		catch (IOException e) {
+		catch (InterruptedException e) {
+			taskActive = false;
+			Thread.currentThread().interrupt();
+			executable.destroy();
+			service.updateJobRunEnd(taskCommand.getExecutionId(), System.currentTimeMillis(), 1, e);
+		}
+		catch (Exception e) {
+			taskActive = false;
 			log.error("Error while executing job - "+taskCommand.getJobName(), e);
 			service.updateJobRunEnd(taskCommand.getExecutionId(), System.currentTimeMillis(), 1, e);
 		} 
-		catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-			if (process != null) {
-				process.destroy();
-			}
-			service.updateJobRunEnd(taskCommand.getExecutionId(), System.currentTimeMillis(), 1, e);
-		}
+		
 	}
 }

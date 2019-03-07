@@ -20,11 +20,12 @@ import org.reactiveminds.kron.core.model.JobEntry;
 import org.reactiveminds.kron.core.model.JobEntryRepo;
 import org.reactiveminds.kron.core.model.JobRunEntry;
 import org.reactiveminds.kron.core.model.NodeInfo;
+import org.reactiveminds.kron.core.model.NodeStat;
+import org.reactiveminds.kron.core.model.NodeStatComparator;
 import org.reactiveminds.kron.core.model.RunState;
 import org.reactiveminds.kron.core.vo.CommandTarget;
 import org.reactiveminds.kron.err.OperationNotPermittedException;
 import org.reactiveminds.kron.utils.JsonMapper;
-import org.reactiveminds.kron.utils.NodeInfoComparator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
@@ -146,15 +147,15 @@ class DefaultDistributionService implements DistributionService {
 	}
 
 	@Override
-	public void updateWorkerSystemInfo(NodeInfo info) {
-		IMap<String, NodeInfo> map = hazelcast.getMap(NODE_INFO);
+	public void updateWorkerSystemInfo(NodeStat info) {
+		IMap<String, NodeStat> map = hazelcast.getMap(NODE_INFO);
 		map.set(info.getWorkerId(), info, nodeinfoExpiry, TimeUnit.SECONDS);
 	}
 	
 	@Override
-	public NavigableSet<NodeInfo> getWorkerSnapshot() {
-		IMap<String, NodeInfo> map = hazelcast.getMap(NODE_INFO);
-		TreeSet<NodeInfo> sorted = new TreeSet<>(new NodeInfoComparator());
+	public NavigableSet<NodeStat> getWorkerSnapshot() {
+		IMap<String, NodeStat> map = hazelcast.getMap(NODE_INFO);
+		TreeSet<NodeStat> sorted = new TreeSet<>(new NodeStatComparator());
 		map.entrySet().forEach(e -> sorted.add(e.getValue()));
 		return sorted;
 	}
@@ -280,18 +281,14 @@ class DefaultDistributionService implements DistributionService {
 		}
 	}
 
-	/*
-	 * @Override
-	public void submitJob(ScheduleCommand command, JobRunEntry entry) {
-		TransactionContext ctx = hazelcast.newTransactionContext();
-		hazelcast.executeTransaction(new TransactionalTask<Void>() {
-
-			@Override
-			public Void execute(TransactionalTaskContext context) throws TransactionException {
-				// TODO Auto-generated method stub
-				return null;
-			}
-		});
+	@Override
+	public List<NodeInfo> getWorkers() {
+		return StreamSupport.stream(hazelcast.getClientService().getConnectedClients().spliterator(), false)
+		.map(c -> new NodeInfo(c.getUuid())).sorted((n1, n2) -> n1.getWorkerId().compareTo(n2.getWorkerId())).collect(Collectors.toList());
 	}
-	 */
+
+	@Override
+	public long getNextIncrement(String key) {
+		return hazelcast.getAtomicLong(key).getAndIncrement();
+	}
 }
