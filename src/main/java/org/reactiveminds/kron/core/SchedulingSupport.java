@@ -44,7 +44,7 @@ public interface SchedulingSupport{
 	 */
 	int executionCapacity();
 	/**
-	 * 
+	 * Await completion of a given task, identified by id
 	 * @param id
 	 * @param timeout
 	 * @param unit

@@ -16,10 +16,11 @@ import javax.annotation.PreDestroy;
 import org.reactiveminds.kron.core.ScheduledDaemon;
 import org.reactiveminds.kron.core.SchedulingSupport;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.support.CronTrigger;
-import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.Assert;
 
 class SpringSchedulingSupport implements SchedulingSupport {
 
@@ -44,7 +45,7 @@ class SpringSchedulingSupport implements SchedulingSupport {
 	@Autowired
 	private TaskScheduler scheduler;
 	@Autowired
-	private ThreadPoolTaskExecutor executor;
+	private AsyncTaskExecutor executor;
 	
 	private final Map<Long, FutureWrapper> futures = new ConcurrentHashMap<>();
 	
@@ -66,14 +67,15 @@ class SpringSchedulingSupport implements SchedulingSupport {
 
 	@Override
 	public long execute(Runnable daemon) {
-		ListenableFuture<?> f = executor.submitListenable(daemon);
+		Future<?> f = executor.submit(daemon);
 		FutureWrapper wrap = new FutureWrapper(f, true);
 		futures.put(wrap.id, wrap);
 		return wrap.id;
 	}
 	@Override
 	public int executionCapacity() {
-		return executor.getMaxPoolSize() - executor.getActiveCount();
+		Assert.isInstanceOf(ThreadPoolTaskExecutor.class, executor, "UnsupportedOperation - Executor not an instance of ThreadPoolTaskExecutor");
+		return ((ThreadPoolTaskExecutor) executor).getMaxPoolSize() - ((ThreadPoolTaskExecutor) executor).getActiveCount();
 	}
 
 	@Override

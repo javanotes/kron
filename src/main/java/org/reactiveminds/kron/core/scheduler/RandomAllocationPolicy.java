@@ -1,37 +1,35 @@
 package org.reactiveminds.kron.core.scheduler;
 
-import java.util.NavigableSet;
+import java.util.List;
+import java.util.Random;
 
 import org.reactiveminds.kron.core.DistributionService;
 import org.reactiveminds.kron.core.WorkerAllocationPolicy;
 import org.reactiveminds.kron.core.model.NodeInfo;
-import org.reactiveminds.kron.core.model.NodeStat;
 import org.reactiveminds.kron.core.vo.ExecuteCommand;
 import org.reactiveminds.kron.err.NoWorkerAvailableException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.stereotype.Service;
 
-@Lazy
-@Service
-class LoadBalancedSchedulingPolicy implements WorkerAllocationPolicy {
+class RandomAllocationPolicy implements WorkerAllocationPolicy {
 
 	@Autowired
 	private DistributionService distService;
+	private Random nextRand = new Random();
 	@Override
 	public void allocate(ExecuteCommand command) {
-		NavigableSet<NodeStat> nodes = distService.getWorkerSnapshot();
+		List<NodeInfo> nodes = distService.getWorkers();
 		if(nodes == null || nodes.isEmpty()) {
 			throw new NoWorkerAvailableException(command.getJobName());
 		}
-		NodeInfo node = nodes.first();
+		int incr = nextRand.nextInt(nodes.size());
+		NodeInfo node = nodes.get(incr);
 		command.setTargetPattern(node.getWorkerId());
 		log.info(name()+": Allocated to node "+node.getWorkerId());
 	}
 
 	@Override
 	public String name() {
-		return "LOADBALANCED";
+		return "RANDOM";
 	}
 
 }
