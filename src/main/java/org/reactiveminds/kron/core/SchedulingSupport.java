@@ -1,5 +1,6 @@
 package org.reactiveminds.kron.core;
 
+import java.util.Date;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -24,7 +25,7 @@ public interface SchedulingSupport{
 	 * @param daemon
 	 * @param cronSequence
 	 */
-	long schedule(Runnable daemon, String cronSequence);
+	long schedule(Runnable daemon, String cronSequence, Date initiateFrom);
 	/**
 	 * Schedule this task at a fixed rate, or at a specified instant when
 	 * {@link Schedule#getRepeatAfter()} is 0

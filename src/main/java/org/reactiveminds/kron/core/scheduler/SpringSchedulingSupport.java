@@ -1,5 +1,6 @@
 package org.reactiveminds.kron.core.scheduler;
 
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -19,7 +20,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.scheduling.support.CronTrigger;
 import org.springframework.util.Assert;
 
 class SpringSchedulingSupport implements SchedulingSupport {
@@ -79,8 +79,8 @@ class SpringSchedulingSupport implements SchedulingSupport {
 	}
 
 	@Override
-	public long schedule(Runnable daemon, String cronExpr) {
-		ScheduledFuture<?> f = scheduler.schedule(daemon, new CronTrigger(cronExpr));
+	public long schedule(Runnable daemon, String cronExpr, Date startFrom) {
+		ScheduledFuture<?> f = scheduler.schedule(daemon, new DelayingCronTrigger(cronExpr, startFrom));
 		FutureWrapper wrap = new FutureWrapper(f, true);
 		futures.put(wrap.id, wrap);
 		return wrap.id;

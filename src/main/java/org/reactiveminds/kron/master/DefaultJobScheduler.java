@@ -114,7 +114,13 @@ class DefaultJobScheduler implements JobScheduler {
 	}
 	private void scheduleRepeatable(ScheduleCommand request, JobEntry job) {
 		request.setCronExpr(job.getCronSchedule());
-		long id = scheduler.schedule(new ScheduleRunner(request), job.getCronSchedule());
+		Date schedAt = null;
+		try {
+			schedAt = parseScheduleAtDate(job);
+		} catch (Exception e) {
+			// ignore
+		}
+		long id = scheduler.schedule(new ScheduleRunner(request), job.getCronSchedule(), schedAt);
 		scheduled.put(job.getJobName(), id);
 		log.info("Scheduled for ["+request.getJobName()+"] - "+job.getCronSchedule());
 	}
