@@ -67,7 +67,7 @@ public class JobEntry implements DataSerializable {
 	public void setStartFrom(String startFrom) {
 		this.startFrom = startFrom;
 	}
-	
+	private boolean embeddedExec;
 	private String dateFormat;
 	//..other properties
 	
@@ -79,6 +79,7 @@ public class JobEntry implements DataSerializable {
 		out.writeUTF(jobName);
 		out.writeUTF(startFrom);
 		out.writeUTF(dateFormat);
+		out.writeBoolean(embeddedExec);
 	}
 
 	@Override
@@ -90,6 +91,7 @@ public class JobEntry implements DataSerializable {
 		setJobName(in.readUTF());
 		setStartFrom(in.readUTF());
 		setDateFormat(in.readUTF());
+		setEmbeddedExec(in.readBoolean());
 	}
 	public boolean isEnabled() {
 		return isEnabled;
@@ -102,5 +104,11 @@ public class JobEntry implements DataSerializable {
 	}
 	public void setDateFormat(String dateFormat) {
 		this.dateFormat = dateFormat;
+	}
+	public boolean isEmbeddedExec() {
+		return embeddedExec;
+	}
+	public void setEmbeddedExec(boolean embeddedExec) {
+		this.embeddedExec = embeddedExec;
 	}
 }

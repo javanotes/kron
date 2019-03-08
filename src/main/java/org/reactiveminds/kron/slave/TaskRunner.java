@@ -115,6 +115,6 @@ class TaskRunner implements Runnable, TaskProxy {
 			log.error("Error while executing job - "+taskCommand.getJobName(), e);
 			service.updateJobRunEnd(taskCommand.getExecutionId(), System.currentTimeMillis(), 1, e);
 		} 
-		
+		log.info("["+taskCommand.getJobName()+"] End task ");
 	}
 }

@@ -50,6 +50,7 @@ class DefaultJobScheduler implements JobScheduler {
 			try 
 			{
 				ScheduleCommand newRequest = request.copy();
+				newRequest.setEmbeddedExec(request.isEmbeddedExec());
 				policy.allocate(newRequest);
 				
 				JobRunEntry runEntry = new JobRunEntry();
@@ -98,19 +99,21 @@ class DefaultJobScheduler implements JobScheduler {
 	@Override
 	public void scheduleJob(JobEntry job) {
 		cancelJob(job.getJobName());
-		if(StringUtils.hasText(job.getCronSchedule())) {
-			scheduleRepeatable(job);
-		}
-		else {
-			scheduleAt(job);
-		}
-	}
-	private void scheduleRepeatable(JobEntry job) {
+		
 		ScheduleCommand request = new ScheduleCommand();
 		request.setExecution(job.getJob());
 		request.setJobName(job.getJobName());
-		(request).setCronExpr(job.getCronSchedule());
+		request.setEmbeddedExec(job.isEmbeddedExec());
 		
+		if(StringUtils.hasText(job.getCronSchedule())) {
+			scheduleRepeatable(request, job);
+		}
+		else {
+			scheduleAt(request, job);
+		}
+	}
+	private void scheduleRepeatable(ScheduleCommand request, JobEntry job) {
+		request.setCronExpr(job.getCronSchedule());
 		long id = scheduler.schedule(new ScheduleRunner(request), job.getCronSchedule());
 		scheduled.put(job.getJobName(), id);
 		log.info("Scheduled for ["+request.getJobName()+"] - "+job.getCronSchedule());
@@ -129,10 +132,7 @@ class DefaultJobScheduler implements JobScheduler {
 		}
 		return new SimpleDateFormat(job.getDateFormat()).parse(job.getStartFrom());
 	}
-	private void scheduleAt(JobEntry job) {
-		ScheduleCommand request = new ScheduleCommand();
-		request.setExecution(job.getJob());
-		request.setJobName(job.getJobName());
+	private void scheduleAt(ScheduleCommand request, JobEntry job) {
 		try {
 			Schedule sched = new Schedule(parseScheduleAtDate(job));
 			long id = scheduler.schedule(new SingleScheduleRunner(request, sched));
